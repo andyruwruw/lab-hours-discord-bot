@@ -5,11 +5,14 @@ const schema = new mongoose.Schema({
         type: mongoose.Schema.ObjectId,
         ref: 'TA'
     },
-    start: Date,
-    end: Date,
+    start: Number,
+    end: Number,
     canceled: Boolean,
-  });
+});
   
-  const LabHour = mongoose.model('LabHour', schema);
 
-  module.exports = LabHour;
+  // Profile Object
+const LabHour = mongoose.model('LabHour', schema);
+
+// Export
+module.exports = LabHour;

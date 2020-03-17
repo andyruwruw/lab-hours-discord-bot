@@ -1,12 +1,22 @@
 // Dependencies
 let Discord = require('discord.js');
+
+const mongoose = require("mongoose");
+
+mongoose.connect('mongodb://localhost:27017/tabot', {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+});
+
 var add = require('date-fns/add');
-var startOfHour = require('date-fns/startOfHour')
-var setHours = require('date-fns/setHours')
-var differenceInHours = require('date-fns/differenceInHours')
-var isThisHour = require('date-fns/isThisHour')
+var formatDistanceToNow = require('date-fns/formatDistanceToNow')
 var isPast = require('date-fns/isPast')
 var isFuture = require('date-fns/isFuture')
+
+let TA = require('./ta.js');
+let LabHour = require('./labhour.js');
+
+
 
 // Inherits from Discord.js Client
 class TaBot extends Discord.Client {
@@ -17,32 +27,28 @@ class TaBot extends Discord.Client {
         this.on('ready', this.handleConnect);
         // Defining Member Function for Message Event
         this.on('message', this.handleMessage);
-        // Lab Hours
-        this.setUpHours();
     }
 
     handleConnect() {
         console.log('Logged in as BOT');
     }
 
-    // Upon Discord Message
     async handleMessage(message) {
-        // Check if its a relevent command.
+        console.log("Handle");
         if (message.content.substring(0, 1) != '/') return;
-        // Parse Arguments
         let args = message.content.substring(1).split(' ');
         let cmd = args[0];
         args = args.splice(1);
-        // split commands
         switch(cmd) {
             case 'help':
                 this.help(message);
                 break;
-            case 'exception':
-                this.exception(message);
+            case 'cancel':
+                this.cancel(message, args);
                 break;
             case 'taschedule':
-                this.ta(message);
+                console.log("calling");
+                this.taSchedule(message);
                 break;
             default:
                 this.invalidCommand(message);
@@ -63,155 +69,138 @@ class TaBot extends Discord.Client {
         const embed = new Discord.MessageEmbed()
         .setTitle('Available Commands')
         .setColor(0x2bff99)
-        .setDescription('`/help`: Displays available Commands.\n`/ta`: Shows current or next TA scheduled and any exceptions.');
+        .setDescription('`/help`: Displays available Commands.\n`/taschedule`: Shows current or next TA scheduled and any exceptions.');
         message.reply(embed);
         return false;
     }
 
-    exception(message) {
-        message.reply("Exception Command");
-        return false;
-    }
-
-    ta(message) {
-        let now = new Date();
-        let current = null;
-        let nextClosest = null;
-        let distance = 10000000;
-        let nextNextClosest = null;
-        let nextDistance = 10000000;
-        for (let i = 0; i < this.hours.length; i++) {
-            while (isPast(this.hours[i].time) && !isThisHour(this.hours[i].time)) {
-                console.log("MOVING", this.hours[i], this.hours[i].time.getHours());
-                this.hours[i].time = add(this.hours[i].time, { weeks: 1 });
-            }
-            if (isThisHour(this.hours[i].time)) {
-                current = this.hours[i];
-            } else if (isFuture(this.hours[i].time) && differenceInHours(now, this.hours[i].time) < distance) {
-                distance = differenceInHours(now, this.hours[i].time);
-                nextClosest = this.hours[i];
-            } else if (isFuture(this.hours[i].time) && differenceInHours(now, this.hours[i].time) < nextDistance) {
-                nextDistance = differenceInHours(now, this.hours[i].time);
-                nextNextClosest = this.hours[i];
-            }
-        }
-
-        console.log(current);
-        console.log(nextClosest);
-        console.log(nextNextClosest);
+    async cancel(message, params) {
         let returnMessage = "";
-        if (current != null) {
-            returnMessage += "Ta's Available: ";
-            for (let i = 0; i < current.ta.length; i++) {
-                returnMessage += current.ta[i];
-                if (i < current.ta.length - 1) {
-                    returnMessage += ",";
+        if (params.length == 3) {
+            let name = params[0].charAt(0).toUpperCase() + params[0].substring(1);
+            let ta = await TA.findOne({
+                name: name,
+            });
+            let days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+            const isSame = (element) => element == params[1];
+            let dayIndex = days.findIndex(isSame);
+            let event = null;
+            if (ta != null) {
+                if (dayIndex != -1) {
+                    let hours = await LabHour.find({
+                        ta: ta._id,
+                    });
+                    for (let i = 0; i < hours.length; i++) {
+                        let start = new Date(hours[i].start);
+                        let day = start.getDay();
+                        let hour = start.getHours();
+                        if (day == dayIndex && hour == parseInt(params[2], 10)) {
+                            event = hours[i];
+                            await LabHour.updateOne({
+                                _id: hours[i]._id,
+                            }, {
+                                $set: {
+                                    canceled: true,
+                                }
+                            });
+                            break;
+                        }
+                    }
+                    if (event) {
+                        let day = days[(new Date(event.start)).getDay()].charAt(0).toUpperCase() + days[(new Date(event.start)).getDay()].substring(1);
+                        let hour = new Date(event.start).getHours();
+                        returnMessage = "Success: Lab Hours at " + hour + " on " + day + " for **" + name + "** has been canceled";
+                    } else {
+                        returnMessage = "**Error**: No Lab Hour scheduled at that time.\n";
+                    }
+                } else {
+                    returnMessage = "**Error**: Incorrect Day.\nTry: monday, tuesday, wednesday, thursday, friday, saturday";
                 }
+            } else {
+                returnMessage = "**Error**: TA does not exist.\nContact Andrew. He screwed up somewhere.";
             }
+        } else {
+            returnMessage = "**Error**: Forgot a parameter.\n**Cancel Command:**`/cancel name day hour`\n**Example:** /cancel bob tuesday 14";
         }
         
+        
+
         const embed = new Discord.MessageEmbed()
-        .setTitle('TA Availability')
+        .setTitle('Canceling Lab Hours:')
         .setColor(0x25faf6)
         .setDescription(returnMessage);
         message.reply(embed);
         return false;
     }
 
-    async setUpHours() {
-        this.hours = [
-            {time: this.getTime(1, 8), ta: ["Luke"]},
-            {time: this.getTime(1, 9),  ta: ["Connor", "Luke"]},
-            {time: this.getTime(1, 10),  ta: ["Connor", "Luke"]},
-            {time: this.getTime(1, 12),  ta: ["Connor"]},
-            {time: this.getTime(1, 14),  ta: ["Connor"]},
-            {time: this.getTime(1, 15),  ta: ["Casey"]},
-            {time: this.getTime(1, 16),  ta: ["Casey"]},
-            {time: this.getTime(2, 8),  ta: ["Katy"]},
-            {time: this.getTime(2, 10),  ta: ["Andrew"]},
-            {time: this.getTime(2, 12),  ta: ["Katy"]},
-            {time: this.getTime(2, 18),  ta: ["Bethany"]},
-            {time: this.getTime(3, 8),  ta: ["Luke"]},
-            {time: this.getTime(3, 9),  ta: ["Connor", "Luke"]},
-            {time: this.getTime(3, 10),  ta: ["Connor", "Luke"]},
-            {time: this.getTime(3, 11),  ta: ["Connor", "Luke"]},
-            {time: this.getTime(3, 12),  ta: ["Connor", "Andrew"]},
-            {time: this.getTime(3, 13),  ta: ["Connor", "Andrew"]},
-            {time: this.getTime(3, 15),  ta: ["Casey"]},
-            {time: this.getTime(3, 16),  ta: ["Casey"]},
-            {time: this.getTime(3, 17),  ta: ["Trevor"]},
-            {time: this.getTime(3, 18),  ta: ["Trevor"]},
-            {time: this.getTime(4, 8),  ta: ["Luke"]},
-            {time: this.getTime(4, 9),  ta: ["Luke"]},
-            {time: this.getTime(4, 10),  ta: ["Andrew"]},
-            {time: this.getTime(4, 11),  ta: ["Andrew", "Katy"]},
-            {time: this.getTime(4, 12),  ta: ["Katy"]},
-            {time: this.getTime(4, 15),  ta: ["Trevor"]},
-            {time: this.getTime(4, 16),  ta: ["Trevor"]},
-            {time: this.getTime(4, 17),  ta: ["Bethany"]},
-            {time: this.getTime(4, 18),  ta: ["Bethany"]},
-            {time: this.getTime(5, 8),  ta: ["Luke"]},
-            {time: this.getTime(5, 9),  ta: ["Luke", "Katy"]},
-            {time: this.getTime(5, 10),  ta: ["Katy"]},
-            {time: this.getTime(5, 15),  ta: ["Bethany"]},
-            {time: this.getTime(5, 16),  ta: ["Bethany"]},
-            {time: this.getTime(5, 17),  ta: ["Bethany"]},
-            {time: this.getTime(6, 10), ta: ["Casey"]},
-            {time: this.getTime(6, 11),  ta: ["Casey"]},
-            {time: this.getTime(6, 12),  ta: ["Casey"]},
-        ];
-        // this.hours = [
-        //     {time: this.getTime(1, 8), ta: ["Luke"]},
-        //     {time: this.getTime(1, 9),  ta: ["Connor", "Luke"]},
-        //     {time: this.getTime(1, 10),  ta: ["Connor", "Luke"]},
-        //     {time: this.getTime(1, 12),  ta: ["Connor"]},
-        //     {time: this.getTime(1, 13),  ta: ["Connor"]},
-        //     {time: this.getTime(1, 15),  ta: ["Casey"]},
-        //     {time: this.getTime(1, 16),  ta: ["Casey"]},
-        //     {time: this.getTime(2, 8),  ta: ["Katy"]},
-        //     {time: this.getTime(2, 10),  ta: ["Andrew"]},
-        //     {time: this.getTime(2, 12),  ta: ["Katy"]},
-        //     {time: this.getTime(2, 18),  ta: ["Bethany"]},
-        //     {time: this.getTime(3, 8),  ta: ["Luke"]},
-        //     {time: this.getTime(3, 9),  ta: ["Connor", "Luke"]},
-        //     {time: this.getTime(3, 10),  ta: ["Connor", "Luke"]},
-        //     {time: this.getTime(3, 11),  ta: ["Connor", "Luke"]},
-        //     {time: this.getTime(3, 12),  ta: ["Connor", "Andrew"]},
-        //     {time: this.getTime(3, 13),  ta: ["Connor", "Andrew"]},
-        //     {time: this.getTime(3, 15),  ta: ["Casey"]},
-        //     {time: this.getTime(3, 16),  ta: ["Casey"]},
-        //     {time: this.getTime(3, 17),  ta: ["Trevor"]},
-        //     {time: this.getTime(3, 18),  ta: ["Trevor"]},
-        //     {time: this.getTime(4, 8),  ta: ["Luke"]},
-        //     {time: this.getTime(4, 9),  ta: ["Luke"]},
-        //     {time: this.getTime(4, 10),  ta: ["Andrew"]},
-        //     {time: this.getTime(4, 11),  ta: ["Andrew", "Katy"]},
-        //     {time: this.getTime(4, 12),  ta: ["Katy"]},
-        //     {time: this.getTime(4, 15),  ta: ["Trevor"]},
-        //     {time: this.getTime(4, 16),  ta: ["Trevor"]},
-        //     {time: this.getTime(4, 17),  ta: ["Bethany"]},
-        //     {time: this.getTime(4, 18),  ta: ["Bethany"]},
-        //     {time: this.getTime(5, 8),  ta: ["Luke"]},
-        //     {time: this.getTime(5, 9),  ta: ["Luke", "Katy"]},
-        //     {time: this.getTime(5, 10),  ta: ["Katy"]},
-        //     {time: this.getTime(5, 15),  ta: ["Bethany"]},
-        //     {time: this.getTime(5, 16),  ta: ["Bethany"]},
-        //     {time: this.getTime(5, 17),  ta: ["Bethany"]},
-        //     {time: this.getTime(6, 10), ta: ["Casey"]},
-        //     {time: this.getTime(6, 11),  ta: ["Casey"]},
-        //     {time: this.getTime(6, 12),  ta: ["Casey"]},
-        // ];
-        this.exceptions = [];
+    async taSchedule(message) {
+        try {
+            let returnMessage = "";
+            let now = new Date();
+            let hours = await LabHour.find();
+            let current = [];
+            for (let i = 0; i < hours.length; i++) {
+                let start = new Date(hours[i].start);
+                let end = new Date(hours[i].end);
+                if (isPast(end)) {
+                    start = add(start, { weeks: 1 });
+                    end = add(end, { weeks: 1 });
+                    await LabHour.updateOne({
+                        _id: hours[i]._id,
+                    }, {
+                        $set: {
+                            start: start,
+                            end: end,
+                            canceled: false,
+                        }
+                    });
+                }
+                if (isPast(start) && isFuture(end)) {
+                    current.push(hours[i]);
+                }
+            }
+            let oneWorking = false;
+            for (let i = 0; i < current.length; i++) {
+                let ta = await TA.findById(current[i].ta.name);
+                if (!current[i].canceled) {
+                    oneWorking = true;
+                    returnMessage += "**" + ta.name + "** is currently working.\n";
+                } else {
+                    returnMessage += "**" + ta.name + "** canceled their current hours.\n";
+                }
+            }
+            if (!current.length) {
+                returnMessage += "No TA's scheduled for this hour.\n";
+            }
+            if (!oneWorking) {
+                hours = await LabHour.find();
+                let next = [];
+                let distance = 0;
+                for (let i = 0; i < hours.length; i++) {
+                    let diff = hours[i].start - now.getTime();
+                    if (diff == distance && !hours[i].canceled) {
+                        next.push(hours[i]);
+                    }
+                    if ((diff < distance || !next.length) && !hours[i].canceled) {
+                        next = [hours[i]];
+                        distance = diff;
+                    }
+                }
+                for (let i = 0; i < next.length; i++) {
+                    let ta = await TA.findById(next[i].ta);
+                    returnMessage += "\nNext Available TA: **" + ta.name + "** " + formatDistanceToNow(next[i].start, { addSuffix: true });
+                }
+            }
+            const embed = new Discord.MessageEmbed()
+            .setTitle('TA Availability')
+            .setColor(0x25faf6)
+            .setDescription(returnMessage);
+            message.reply(embed);
+        } catch(error) {
+            console.log(error);
+        }
+        return false;
     }
 
-    getTime(day, hour) {
-        let now = new Date();
-        let differenceToZero = 7 - now.getDay();
-        if (differenceToZero == 7) differenceToZero = 0;
-        let date = add(now, { days: differenceToZero + day, weeks: -1 });
-        date = setHours(date, hour);
-        date = startOfHour(date);
-        return date;
-    }
 }
 module.exports = TaBot;

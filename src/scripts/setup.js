@@ -1,9 +1,17 @@
 const mongoose = require("mongoose");
+var add = require('date-fns/add');
+var startOfHour = require('date-fns/startOfHour')
+var setHours = require('date-fns/setHours')
+
+mongoose.connect('mongodb://localhost:27017/tabot', {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+});
 
 let TA = require('./ta');
 let LabHour = require('./labhour');
 
-let setup = function() {
+let setup = async function() {
     let TAs = [
         {
             name: "Andrew",
@@ -57,8 +65,31 @@ let setup = function() {
         },
     ];
     for (let i = 0; i < TAs.length; i++) {
-        
+        let ta = new TA({
+            name: TAs[i].name,
+        });
+        await ta.save();
+        for (let j = 0; j < TAs[i].hours.length; j++) {
+            let hour = new LabHour({
+                ta: ta,
+                start: (await getTime(TAs[i].hours[j].start.day, TAs[i].hours[j].start.hour)).getTime(),
+                end: (await getTime(TAs[i].hours[j].end.day, TAs[i].hours[j].end.hour)).getTime(),
+                canceled: false,
+            });
+            await hour.save();
+        }
+         
     }
-
 }
 
+function getTime(day, hour) {
+    let now = new Date();
+    let differenceToZero = 7 - now.getDay();
+    if (differenceToZero == 7) differenceToZero = 0;
+    let date = add(now, { days: differenceToZero + day, weeks: -1 });
+    date = setHours(date, hour);
+    date = startOfHour(date);
+    return date;
+}
+
+setup();
