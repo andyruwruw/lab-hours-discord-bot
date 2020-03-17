@@ -214,8 +214,7 @@ class TaBot extends Discord.Client {
                         });
                         for (let i = 0; i < hours.length; i++) {
                             let start = new Date(hours[i].start);
-                            let timeDifference = start.getTimezoneOffset();
-                            start = add(start, {minutes: -timeDifference});
+                            start = await sub(start, {minutes: 360});
                             let day = start.getDay();
                             let hour = start.getHours();
                             if (day == dayIndex && hour == parseInt(params[2], 10)) {
@@ -232,8 +231,7 @@ class TaBot extends Discord.Client {
                         }
                         if (event) {
                             let start = new Date(event.start);
-                            let timeDifference = start.getTimezoneOffset();
-                            start = add(start, {minutes: -timeDifference});
+                            start = await sub(start, {minutes: 360});
                             let day = days[(start).getDay()].charAt(0).toUpperCase() + days[(start).getDay()].substring(1);
                             let hour = start.getHours();
                             returnMessage = "Success: Lab Hours at " + hour + " on " + day + " for **" + name + "** have been un-canceled";
@@ -288,8 +286,7 @@ class TaBot extends Discord.Client {
                         });
                         for (let i = 0; i < hours.length; i++) {
                             let start = new Date(hours[i].start);
-                            let timeDifference = start.getTimezoneOffset();
-                            start = add(start, {minutes: -timeDifference});
+                            start = await sub(start, {minutes: 360});
                             let day = start.getDay();
                             let hour = start.getHours();
                             if (day == dayIndex && hour == parseInt(params[2], 10)) {
@@ -306,8 +303,7 @@ class TaBot extends Discord.Client {
                         }
                         if (event) {
                             let start = new Date(event.start);
-                            let timeDifference = start.getTimezoneOffset();
-                            start = add(start, {minutes: -timeDifference});
+                            start = await sub(start, {minutes: 360});
                             let day = days[(start).getDay()].charAt(0).toUpperCase() + days[(start).getDay()].substring(1);
                             let hour = start.getHours();
                             returnMessage = "Success: Lab Hours at " + hour + " on " + day + " for **" + name + "** has been canceled";
