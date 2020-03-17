@@ -5,6 +5,7 @@ var add = require('date-fns/add');
 var formatDistanceToNow = require('date-fns/formatDistanceToNow')
 var isPast = require('date-fns/isPast')
 var isFuture = require('date-fns/isFuture')
+var sub = require('date-fns/sub')
 
 // Connecting to database.
 mongoose.connect('mongodb://localhost:27017/tabot', {
@@ -145,9 +146,8 @@ class TaBot extends Discord.Client {
                             });
                             old = true;
                         }
-                        let timeDifference = start.getTimezoneOffset();
-                        start = add(start, {minutes: -timeDifference});
-                        end = add(end, {minutes: -timeDifference});
+                        start = await sub(start, {minutes: 360});
+                        end = await sub(end, {minutes: 360});
                         let day = start.getDay();
                         let hour = start.getHours();
                         let endHour = end.getHours();
