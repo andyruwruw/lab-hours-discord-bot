@@ -123,17 +123,36 @@ class TaBot extends Discord.Client {
                     name: name,
                 });
                 if (ta != null) {
-                    let days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+                    let days = ["**Sunday**", "**Monday**", "**Tuesday**", "**Wednesday**", "**Thursday**", "**Friday**", "**Saturday**"];
                     let hours = await LabHour.find({
                         ta: ta._id,
                     });
                     for (let i = 0; i < hours.length; i++) {
+                        let old = false;
                         let start = new Date(hours[i].start);
                         let end = new Date(hours[i].end);
+                        if (isPast(end)) {
+                            start = add(start, { weeks: 1 });
+                            end = add(end, { weeks: 1 });
+                            await LabHour.updateOne({
+                                _id: hours[i]._id,
+                            }, {
+                                $set: {
+                                    start: start,
+                                    end: end,
+                                    canceled: false,
+                                }
+                            });
+                            old = true;
+                        }
                         let day = start.getDay();
                         let hour = start.getHours();
                         let endHour = end.getHours();
-                        returnMessage += days[day] + ": " + this.editHour(hour) + " to " + this.editHour(endHour) + "\n";
+                        returnMessage += days[day] + ": " + this.editHour(hour) + " to " + this.editHour(endHour);
+                        if (hours[i].canceled && !old) {
+                            returnMessage += " **CANCELED**";
+                        }
+                        returnMessage += "\n";
                     }
                 } else {
                     returnMessage = "**Error**: TA does not exist.\nContact Andrew. He screwed up somewhere.";
@@ -365,8 +384,10 @@ class TaBot extends Discord.Client {
                     }
                 }
                 for (let i = 0; i < next.length; i++) {
+                    let start = new Date(next[i].start);
+                    console.log(start.getHours(), );
                     let ta = await TA.findById(next[i].ta);
-                    returnMessage += "\nNext Available TA: **" + ta.name + "** " + formatDistanceToNow(next[i].start, { addSuffix: true });
+                    returnMessage += "\nNext Available TA: **" + ta.name + "** " + formatDistanceToNow(start, { addSuffix: true });
                 }
             }
             const embed = new Discord.MessageEmbed()
