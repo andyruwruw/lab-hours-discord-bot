@@ -153,7 +153,7 @@ class TaBot extends Discord.Client {
                         let endHour = end.getHours();
                         returnMessage += days[day] + ": " + this.editHour(hour) + " to " + this.editHour(endHour);
                         if (hours[i].canceled && !old) {
-                            returnMessage += " **CANCELED**";
+                            returnMessage += " \n**CANCELED**: " + (start.getMonth() + 1) + "/" + start.getDate();
                         }
                         returnMessage += "\n";
                     }
