@@ -145,6 +145,9 @@ class TaBot extends Discord.Client {
                             });
                             old = true;
                         }
+                        let timeDifference = start.getTimezoneOffset();
+                        start = add(start, {minutes: -timeDifference});
+                        end = add(end, {minutes: -timeDifference});
                         let day = start.getDay();
                         let hour = start.getHours();
                         let endHour = end.getHours();
@@ -211,6 +214,8 @@ class TaBot extends Discord.Client {
                         });
                         for (let i = 0; i < hours.length; i++) {
                             let start = new Date(hours[i].start);
+                            let timeDifference = start.getTimezoneOffset();
+                            start = add(start, {minutes: -timeDifference});
                             let day = start.getDay();
                             let hour = start.getHours();
                             if (day == dayIndex && hour == parseInt(params[2], 10)) {
@@ -226,8 +231,11 @@ class TaBot extends Discord.Client {
                             }
                         }
                         if (event) {
-                            let day = days[(new Date(event.start)).getDay()].charAt(0).toUpperCase() + days[(new Date(event.start)).getDay()].substring(1);
-                            let hour = new Date(event.start).getHours();
+                            let start = new Date(event.start);
+                            let timeDifference = start.getTimezoneOffset();
+                            start = add(start, {minutes: -timeDifference});
+                            let day = days[(start).getDay()].charAt(0).toUpperCase() + days[(start).getDay()].substring(1);
+                            let hour = start.getHours();
                             returnMessage = "Success: Lab Hours at " + hour + " on " + day + " for **" + name + "** have been un-canceled";
                         } else {
                             returnMessage = "**Error**: No Lab Hour scheduled at that time.\n";
@@ -280,6 +288,8 @@ class TaBot extends Discord.Client {
                         });
                         for (let i = 0; i < hours.length; i++) {
                             let start = new Date(hours[i].start);
+                            let timeDifference = start.getTimezoneOffset();
+                            start = add(start, {minutes: -timeDifference});
                             let day = start.getDay();
                             let hour = start.getHours();
                             if (day == dayIndex && hour == parseInt(params[2], 10)) {
@@ -295,8 +305,11 @@ class TaBot extends Discord.Client {
                             }
                         }
                         if (event) {
-                            let day = days[(new Date(event.start)).getDay()].charAt(0).toUpperCase() + days[(new Date(event.start)).getDay()].substring(1);
-                            let hour = new Date(event.start).getHours();
+                            let start = new Date(event.start);
+                            let timeDifference = start.getTimezoneOffset();
+                            start = add(start, {minutes: -timeDifference});
+                            let day = days[(start).getDay()].charAt(0).toUpperCase() + days[(start).getDay()].substring(1);
+                            let hour = start.getHours();
                             returnMessage = "Success: Lab Hours at " + hour + " on " + day + " for **" + name + "** has been canceled";
                         } else {
                             returnMessage = "**Error**: No Lab Hour scheduled at that time.\n";

@@ -89,6 +89,7 @@ function getTime(day, hour) {
     let date = add(now, { days: differenceToZero + day, weeks: -1 });
     date = setHours(date, hour);
     date = startOfHour(date);
+    date = add(date, {minutes: 360});
     return date;
 }
 
