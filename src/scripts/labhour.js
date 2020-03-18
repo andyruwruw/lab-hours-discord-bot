@@ -1,10 +1,7 @@
 const mongoose = require("mongoose");
 
 const schema = new mongoose.Schema({
-    ta: {
-        type: mongoose.Schema.ObjectId,
-        ref: 'TA'
-    },
+    ta: String,
     start: Number,
     end: Number,
     canceled: Boolean,

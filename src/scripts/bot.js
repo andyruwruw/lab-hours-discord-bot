@@ -14,7 +14,6 @@ mongoose.connect('mongodb://localhost:27017/tabot', {
 });
 
 // Models
-let TA = require('./ta.js');
 let LabHour = require('./labhour.js');
 
 /**
@@ -120,45 +119,38 @@ class TaBot extends Discord.Client {
             let returnMessage = "";
             if (params.length > 0) {
                 name = params[0].charAt(0).toUpperCase() + params[0].substring(1);
-                let ta = await TA.findOne({
-                    name: name,
+                let days = ["**Sunday**", "**Monday**", "**Tuesday**", "**Wednesday**", "**Thursday**", "**Friday**", "**Saturday**"];
+                let hours = await LabHour.find({
+                    ta: name,
                 });
-                if (ta != null) {
-                    let days = ["**Sunday**", "**Monday**", "**Tuesday**", "**Wednesday**", "**Thursday**", "**Friday**", "**Saturday**"];
-                    let hours = await LabHour.find({
-                        ta: ta._id,
-                    });
-                    for (let i = 0; i < hours.length; i++) {
-                        let old = false;
-                        let start = new Date(hours[i].start);
-                        let end = new Date(hours[i].end);
-                        if (isPast(end)) {
-                            start = add(start, { weeks: 1 });
-                            end = add(end, { weeks: 1 });
-                            await LabHour.updateOne({
-                                _id: hours[i]._id,
-                            }, {
-                                $set: {
-                                    start: start,
-                                    end: end,
-                                    canceled: false,
-                                }
-                            });
-                            old = true;
-                        }
-                        start = await sub(start, {minutes: 360});
-                        end = await sub(end, {minutes: 360});
-                        let day = start.getDay();
-                        let hour = start.getHours();
-                        let endHour = end.getHours();
-                        returnMessage += days[day] + ": " + this.editHour(hour) + " to " + this.editHour(endHour);
-                        if (hours[i].canceled && !old) {
-                            returnMessage += " \nCANCELED: " + (start.getMonth() + 1) + "/" + start.getDate();
-                        }
-                        returnMessage += "\n";
+                for (let i = 0; i < hours.length; i++) {
+                    let old = false;
+                    let start = new Date(hours[i].start);
+                    let end = new Date(hours[i].end);
+                    if (isPast(end)) {
+                        start = add(start, { weeks: 1 });
+                        end = add(end, { weeks: 1 });
+                        await LabHour.updateOne({
+                            _id: hours[i]._id,
+                        }, {
+                            $set: {
+                                start: start,
+                                end: end,
+                                canceled: false,
+                            }
+                        });
+                        old = true;
                     }
-                } else {
-                    returnMessage = "**Error**: TA does not exist.\nContact Andrew. He screwed up somewhere.";
+                    start = await sub(start, {minutes: 360});
+                    end = await sub(end, {minutes: 360});
+                    let day = start.getDay();
+                    let hour = start.getHours();
+                    let endHour = end.getHours();
+                    returnMessage += days[day] + ": " + this.editHour(hour) + " to " + this.editHour(endHour);
+                    if (hours[i].canceled && !old) {
+                        returnMessage += " \nCANCELED: " + (start.getMonth() + 1) + "/" + start.getDate();
+                    }
+                    returnMessage += "\n";
                 }
             } else {
                 returnMessage = "**Error**: Provide a TA's Name.\n**Command**: `/gethours name`\n**Example**: `/gethours andrew`";
@@ -200,49 +192,42 @@ class TaBot extends Discord.Client {
             let returnMessage = "";
             if (params.length == 3) {
                 let name = params[0].charAt(0).toUpperCase() + params[0].substring(1);
-                let ta = await TA.findOne({
-                    name: name,
-                });
                 let days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
                 const isSame = (element) => element == params[1];
                 let dayIndex = days.findIndex(isSame);
                 let event = null;
-                if (ta != null) {
-                    if (dayIndex != -1) {
-                        let hours = await LabHour.find({
-                            ta: ta._id,
-                        });
-                        for (let i = 0; i < hours.length; i++) {
-                            let start = new Date(hours[i].start);
-                            start = await sub(start, {minutes: 360});
-                            let day = start.getDay();
-                            let hour = start.getHours();
-                            if (day == dayIndex && hour == parseInt(params[2], 10)) {
-                                event = hours[i];
-                                await LabHour.updateOne({
-                                    _id: hours[i]._id,
-                                }, {
-                                    $set: {
-                                        canceled: false,
-                                    }
-                                });
-                                break;
-                            }
+                if (dayIndex != -1) {
+                    let hours = await LabHour.find({
+                        ta: name,
+                    });
+                    for (let i = 0; i < hours.length; i++) {
+                        let start = new Date(hours[i].start);
+                        start = await sub(start, {minutes: 360});
+                        let day = start.getDay();
+                        let hour = start.getHours();
+                        if (day == dayIndex && hour == parseInt(params[2], 10)) {
+                            event = hours[i];
+                            await LabHour.updateOne({
+                                _id: hours[i]._id,
+                            }, {
+                                $set: {
+                                    canceled: false,
+                                }
+                            });
+                            break;
                         }
-                        if (event) {
-                            let start = new Date(event.start);
-                            start = await sub(start, {minutes: 360});
-                            let day = days[(start).getDay()].charAt(0).toUpperCase() + days[(start).getDay()].substring(1);
-                            let hour = start.getHours();
-                            returnMessage = "Success: Lab Hours at " + hour + " on " + day + " for **" + name + "** have been un-canceled";
-                        } else {
-                            returnMessage = "**Error**: No Lab Hour scheduled at that time.\n";
-                        }
+                    }
+                    if (event) {
+                        let start = new Date(event.start);
+                        start = await sub(start, {minutes: 360});
+                        let day = days[(start).getDay()].charAt(0).toUpperCase() + days[(start).getDay()].substring(1);
+                        let hour = start.getHours();
+                        returnMessage = "Success: Lab Hours at " + hour + " on " + day + " for **" + name + "** have been un-canceled";
                     } else {
-                        returnMessage = "**Error**: Incorrect Day.\nTry: monday, tuesday, wednesday, thursday, friday, saturday";
+                        returnMessage = "**Error**: No Lab Hour scheduled at that time.\n";
                     }
                 } else {
-                    returnMessage = "**Error**: TA does not exist.\nContact Andrew. He screwed up somewhere.";
+                    returnMessage = "**Error**: Incorrect Day.\nTry: monday, tuesday, wednesday, thursday, friday, saturday";
                 }
             } else {
                 returnMessage = "**Error**: Forgot a parameter.\n**Command**:`/cancel name day hour`\n**Example:** `/cancel bob tuesday 14`";
@@ -272,9 +257,7 @@ class TaBot extends Discord.Client {
             let returnMessage = "";
             if (params.length == 3) {
                 let name = params[0].charAt(0).toUpperCase() + params[0].substring(1);
-                let ta = await TA.findOne({
-                    name: name,
-                });
+                let ta = 1;
                 let days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
                 const isSame = (element) => element == params[1];
                 let dayIndex = days.findIndex(isSame);
@@ -282,7 +265,7 @@ class TaBot extends Discord.Client {
                 if (ta != null) {
                     if (dayIndex != -1) {
                         let hours = await LabHour.find({
-                            ta: ta._id,
+                            ta: name,
                         });
                         for (let i = 0; i < hours.length; i++) {
                             let start = new Date(hours[i].start);
@@ -348,8 +331,8 @@ class TaBot extends Discord.Client {
                 let start = new Date(hours[i].start);
                 let end = new Date(hours[i].end);
                 if (isPast(end)) {
-                    start = add(start, { weeks: 1 });
-                    end = add(end, { weeks: 1 });
+                    start = await add(start, { weeks: 1 });
+                    end = await add(end, { weeks: 1 });
                     await LabHour.updateOne({
                         _id: hours[i]._id,
                     }, {
@@ -366,12 +349,11 @@ class TaBot extends Discord.Client {
             }
             let oneWorking = false;
             for (let i = 0; i < current.length; i++) {
-                let ta = await TA.findById(current[i].ta.name);
                 if (!current[i].canceled) {
                     oneWorking = true;
-                    returnMessage += "**" + ta.name + "** is currently working.\n";
+                    returnMessage += "**" + current[i].ta + "** is currently working.\n";
                 } else {
-                    returnMessage += "**" + ta.name + "** canceled their current hours.\n";
+                    returnMessage += "**" + current[i].ta + "** canceled their current hours.\n";
                 }
             }
             if (!current.length) {
@@ -394,9 +376,7 @@ class TaBot extends Discord.Client {
                 }
                 for (let i = 0; i < next.length; i++) {
                     let start = new Date(next[i].start);
-                    console.log(start.getHours(), );
-                    let ta = await TA.findById(next[i].ta);
-                    returnMessage += "\nNext Available TA: **" + ta.name + "** " + formatDistanceToNow(start, { addSuffix: true });
+                    returnMessage += "\nNext Available TA: **" + next[i].ta + "** " + formatDistanceToNow(start, { addSuffix: true });
                 }
             }
             const embed = new Discord.MessageEmbed()

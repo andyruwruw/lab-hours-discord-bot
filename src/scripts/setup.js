@@ -65,13 +65,9 @@ let setup = async function() {
         },
     ];
     for (let i = 0; i < TAs.length; i++) {
-        let ta = new TA({
-            name: TAs[i].name,
-        });
-        await ta.save();
         for (let j = 0; j < TAs[i].hours.length; j++) {
             let hour = new LabHour({
-                ta: ta,
+                ta: TAs[i].name,
                 start: (await getTime(TAs[i].hours[j].start.day, TAs[i].hours[j].start.hour)).getTime(),
                 end: (await getTime(TAs[i].hours[j].end.day, TAs[i].hours[j].end.hour)).getTime(),
                 canceled: false,
