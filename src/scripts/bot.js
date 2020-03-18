@@ -176,6 +176,7 @@ class TaBot extends Discord.Client {
             return hour + "AM";
         } else {
             hour -= 12;
+            if (hour == 0) hour = 12;
             return hour + "PM";
         }
     }
