@@ -78,9 +78,39 @@ class TaBot extends Discord.Client {
             case 'addshift':
                 this.addshift(message, args);
                 break;
+            case 'gettas':
+                this.gettas(message);
+                break;
             default:
                 this.invalidCommand(message);
                 break;
+        }
+    }
+
+    async gettas(message) {
+        try {
+            let returnMessage = "";
+            let tas = [];
+            let shifts = await LabHour.find();
+            for (let i = 0; i < shifts.length; i++) {
+                if (!(tas.includes(shifts[i].ta))) {
+                    tas.push(shifts[i].ta);
+                }
+            }
+            for (let i = 0; i < tas.length; i++) {
+                returnMessage += tas[i] + "\n";
+            }
+            const embed = new Discord.MessageEmbed()
+            .setTitle("All TA\'s")
+            .setColor(0x25faf6)
+            .setDescription(returnMessage);
+            message.reply(embed);
+        } catch (error) {
+            console.log(error);
+            const embed = new Discord.MessageEmbed()
+            .setTitle('Bot Encountered an Error')
+            .setColor(0x25faf6)
+            message.reply(embed);
         }
     }
 

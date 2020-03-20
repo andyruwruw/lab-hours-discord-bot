@@ -60,6 +60,13 @@ Your bot should be live and listening for commands.
 
 *If none are available at the time, shows how long until next TA is scheduled.*
 
+# Get List of TA's
+```
+/gettas
+```
+### Description:
+*Displays list of TA's names.*
+
 # Get a TA's Shifts
 ```
 /gethours <name>
