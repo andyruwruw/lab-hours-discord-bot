@@ -6,6 +6,8 @@ var formatDistanceToNow = require('date-fns/formatDistanceToNow')
 var isPast = require('date-fns/isPast')
 var isFuture = require('date-fns/isFuture')
 var sub = require('date-fns/sub')
+var startOfHour = require('date-fns/startOfHour')
+var setHours = require('date-fns/setHours')
 
 // Connecting to database.
 mongoose.connect('mongodb://localhost:27017/tabot', {
@@ -70,10 +72,90 @@ class TaBot extends Discord.Client {
             case 'taschedule':
                 this.taSchedule(message);
                 break;
+            case 'reset':
+                this.reset(message, arges);
+                break;
+            case 'addshift':
+                this.addshift(message, arges);
+                break;
             default:
                 this.invalidCommand(message);
                 break;
         }
+    }
+
+    async reset(message, params) {
+        try {
+            let name = null;
+            let returnMessage = "";
+            if (params.length > 0) {
+                name = params[0].charAt(0).toUpperCase() + params[0].substring(1);
+                await LabHour.deleteMany({ta: name});
+            } else {
+                returnMessage = "**Error**: Provide a TA's Name.\n**Command**: `/reset name`\n**Example**: `/reset andrew`";
+            }
+            const embed = new Discord.MessageEmbed()
+            .setTitle("Reset " + name + '\'s Hour')
+            .setColor(0x25faf6)
+            .setDescription(returnMessage);
+            message.reply(embed);
+        } catch (error) {
+            console.log(error);
+            const embed = new Discord.MessageEmbed()
+            .setTitle('Bot Encountered an Error')
+            .setColor(0x25faf6)
+            message.reply(embed);
+        }
+    }
+
+    async addshift(message, params) {
+        try {
+            let name = null;
+            let returnMessage = "";
+            if (params.length > 0) {
+                name = params[0].charAt(0).toUpperCase() + params[0].substring(1);
+                let days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+                const isSame = (element) => element.toLowerCase() == params[1];
+                let dayIndex = days.findIndex(isSame);
+                if (dayIndex != -1) {
+                    let shift = new LabHour({
+                        ta: name,
+                        start: (await this.getTime(dayIndex, parseInt(params[2], 10)).getTime()),
+                        end: (await this.getTime(dayIndex, parseInt(params[3], 10)).getTime()),
+                        canceled: false,
+                    });
+                    await shift.save();
+                } else {
+                    returnMessage = "**Error**: Invalid Day\n**Days**: `monday, tuesday, wednesday, thursday, friday, saturday`";
+                }
+                
+            } else {
+                returnMessage = "**Error**: Provide a TA's Name.\n**Command**: `/addshift name day hour endhour`\n**Example**: `/addshift andrew tuesday 13 15`";
+            }
+            const embed = new Discord.MessageEmbed()
+            .setTitle("Added Shift for " + name)
+            .setColor(0x25faf6)
+            .setDescription(returnMessage);
+            message.reply(embed);
+            this.getHours(message, [name]);
+        } catch (error) {
+            console.log(error);
+            const embed = new Discord.MessageEmbed()
+            .setTitle('Bot Encountered an Error')
+            .setColor(0x25faf6)
+            message.reply(embed);
+        }
+    }
+
+    getTime(day, hour) {
+        let now = new Date();
+        let differenceToZero = 7 - now.getDay();
+        if (differenceToZero == 7) differenceToZero = 0;
+        let date = add(now, { days: differenceToZero + day, weeks: -1 });
+        date = setHours(date, hour);
+        date = startOfHour(date);
+        date = add(date, {minutes: 360});
+        return date;
     }
 
     /**
