@@ -73,10 +73,10 @@ class TaBot extends Discord.Client {
                 this.taSchedule(message);
                 break;
             case 'reset':
-                this.reset(message, arges);
+                this.reset(message, args);
                 break;
             case 'addshift':
-                this.addshift(message, arges);
+                this.addshift(message, args);
                 break;
             default:
                 this.invalidCommand(message);
