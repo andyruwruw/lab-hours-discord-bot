@@ -9,15 +9,15 @@ Discord Bot for managing teacher assistant lab schedule. COVID-19 forced us to p
 
 # Usage
 
-To use you'll have to register a bot on [Discord's website](#https://discordapp.com/developers/applications).
+- To use you'll have to register a bot on [Discord's website](https://discordapp.com/developers/applications).
 
-Here's a [good tutorial](#https://www.digitaltrends.com/gaming/how-to-make-a-discord-bot/) on setting that up.
+Here's a [good tutorial](https://www.digitaltrends.com/gaming/how-to-make-a-discord-bot/) on setting that up.
 
 Following that tutorial, get the bot's token.
 
-Fork and clone this repository to your computer.
+- Fork and clone this repository to your computer.
 
-Create a file called **.env** within the **src** folder.
+- Create a file called **.env** within the **src** folder.
 
 Enter the following into the **.env**:
 ```
@@ -25,11 +25,11 @@ discordToken=YOUR_TOKEN_HERE
 ```
 Replacing **YOUR_TOKEN_HERE** withour bot's token.
 
-Make sure you're running a Mongo Database on your computer. You can edit **src/scripts/setup.js** and run it to add some shifts by default.
+- Make sure you're running a Mongo Database on your computer. You can edit **src/scripts/setup.js** and run it to add some shifts by default.
 
-After that follow the tutorial to invite your bot to your server.
+- After that follow the tutorial to invite your bot to your server.
 
-Run either of these two commands within **src** to start the bot up.
+- Run either of these two commands within **src** to start the bot up.
 ```
 $ npm run start
 ```
