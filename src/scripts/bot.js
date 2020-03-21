@@ -41,6 +41,7 @@ class TaBot extends Discord.Client {
      */
     handleConnect() {
         console.log('Logged in as BOT');
+        this.user.setStatus('Message me /help');
     }
 
     /**
